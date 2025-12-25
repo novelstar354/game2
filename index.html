@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>ピラミッドソリティア</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 :root {
@@ -21,21 +21,22 @@ body {
 }
 
 #game {
-  max-width: 500px;
+  max-width: 520px;
   margin: auto;
   padding: 8px;
 }
 
-h2 {
-  margin: 8px 0;
-  font-size: 1.4em;
-}
+h2 { margin: 8px 0; }
 
 #info {
   display: flex;
   justify-content: space-between;
-  font-size: 1em;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+}
+
+.row {
+  display: flex;
+  justify-content: center;
 }
 
 .card {
@@ -46,17 +47,10 @@ h2 {
   background-position: center;
   border: 2px solid #222;
   margin: 3px;
-  transition: transform 0.15s, opacity 0.2s;
+  transition: transform .15s, opacity .2s;
 }
 
-.card:active {
-  transform: scale(0.95);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
+.card:active { transform: scale(0.95); }
 
 .hidden {
   background-image: url("https://upload.wikimedia.org/wikipedia/commons/5/54/Card_back_01.svg");
@@ -76,7 +70,7 @@ button {
   font-size: 16px;
   border-radius: 8px;
   border: none;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 #clear {
@@ -89,12 +83,6 @@ button {
 @keyframes pop {
   from { transform: scale(1); }
   to { transform: scale(1.2); }
-}
-
-@media (min-width: 700px) {
-  :root {
-    --card-w: 80px;
-  }
 }
 </style>
 </head>
@@ -112,7 +100,7 @@ button {
   <div id="pyramid"></div>
 
   <div>
-    <div id="deck" class="card"></div>
+    <div id="deck" class="card hidden"></div>
     <div id="waste" class="card"></div>
   </div>
 
@@ -124,13 +112,13 @@ button {
 <script>
 const suits = ["S","H","D","C"];
 const values = [
-  {v:1,n:"A"}, {v:2,n:"2"}, {v:3,n:"3"}, {v:4,n:"4"},
-  {v:5,n:"5"}, {v:6,n:"6"}, {v:7,n:"7"},
-  {v:8,n:"8"}, {v:9,n:"9"}, {v:10,n:"10"},
-  {v:10,n:"J"}, {v:10,n:"Q"}, {v:10,n:"K"}
+  {v:1,n:"A"},{v:2,n:"2"},{v:3,n:"3"},{v:4,n:"4"},
+  {v:5,n:"5"},{v:6,n:"6"},{v:7,n:"7"},
+  {v:8,n:"8"},{v:9,n:"9"},{v:10,n:"10"},
+  {v:10,n:"J"},{v:10,n:"Q"},{v:10,n:"K"}
 ];
 
-let deck=[], pyramid=[], selected=null, waste=null;
+let deck=[], pyramid=[], waste=null, selected=null;
 let score=0, combo=0;
 let highScore = Number(localStorage.getItem("pyramidHighScore")) || 0;
 
@@ -169,6 +157,7 @@ function canSelect(r,c){
 function render(){
   const p=document.getElementById("pyramid");
   p.innerHTML="";
+
   pyramid.forEach((row,r)=>{
     const rowDiv=document.createElement("div");
     rowDiv.className="row";
@@ -181,7 +170,7 @@ function render(){
         d.classList.add("hidden");
       } else {
         d.style.backgroundImage=`url(${cardImg(card)})`;
-        d.onclick=()=>selectCard(card,d);
+        d.onclick=()=>selectCard(card);
       }
       rowDiv.appendChild(d);
     });
@@ -190,9 +179,12 @@ function render(){
 
   const w=document.getElementById("waste");
   w.style.backgroundImage = waste ? `url(${cardImg(waste)})` : "";
+  w.onclick = ()=> waste && selectCard(waste);
 
   document.getElementById("score").textContent = "スコア: " + score;
   document.getElementById("highscore").textContent = "ハイスコア: " + highScore;
+
+  checkClear();
 }
 
 function addScore(p){
@@ -203,21 +195,24 @@ function addScore(p){
   }
 }
 
-function selectCard(card, el){
+function selectCard(card){
   if(card.v === 13){
-    addScore(100);
     card.removed = true;
+    addScore(100);
     render();
     return;
   }
+
   if(!selected){
-    selected = {card, el};
-    el.classList.add("selected");
+    selected = card;
   } else {
-    if(selected.card.v + card.v === 13){
-      addScore(100 + combo * 20);
-      selected.card.removed = true;
+    if(selected !== card && selected.v + card.v === 13){
+      selected.removed = true;
       card.removed = true;
+      addScore(100 + combo * 20);
+      combo++;
+    } else {
+      combo = 0;
     }
     selected = null;
     render();
@@ -231,6 +226,13 @@ document.getElementById("deck").onclick = ()=>{
     render();
   }
 };
+
+function checkClear(){
+  const left = pyramid.flat().some(c=>!c.removed);
+  if(!left){
+    document.getElementById("clear").textContent = "🎉 CLEAR!! 🎉";
+  }
+}
 
 function restart(){
   score=0;
