@@ -3,31 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <title>ピラミッドソリティア</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <style>
+:root {
+  --card-w: min(12vw, 70px);
+  --card-h: calc(var(--card-w) * 1.4);
+}
+
 body {
   margin: 0;
   background: linear-gradient(#0a5, #063);
   font-family: sans-serif;
   text-align: center;
   color: white;
+  touch-action: manipulation;
 }
 
-#game { padding: 10px; }
+#game {
+  max-width: 500px;
+  margin: auto;
+  padding: 8px;
+}
+
+h2 {
+  margin: 8px 0;
+  font-size: 1.4em;
+}
+
+#info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1em;
+  margin-bottom: 5px;
+}
 
 .card {
-  width: 60px;
-  height: 84px;
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: 6px;
   background-size: cover;
   background-position: center;
-  border-radius: 6px;
-  margin: 4px;
-  cursor: pointer;
-  transition: transform 0.2s, opacity 0.3s;
   border: 2px solid #222;
+  margin: 3px;
+  transition: transform 0.15s, opacity 0.2s;
 }
 
-.card:hover { transform: scale(1.05); }
+.card:active {
+  transform: scale(0.95);
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+}
 
 .hidden {
   background-image: url("https://upload.wikimedia.org/wikipedia/commons/5/54/Card_back_01.svg");
@@ -37,57 +66,49 @@ body {
   outline: 3px solid red;
 }
 
-.fade {
-  opacity: 0;
-  transform: scale(0.3);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
 #deck, #waste {
   display: inline-block;
-  margin: 10px;
-}
-
-#deck {
-  background-image: url("https://upload.wikimedia.org/wikipedia/commons/5/54/Card_back_01.svg");
+  margin: 6px;
 }
 
 button {
-  padding: 8px 16px;
+  padding: 10px 18px;
   font-size: 16px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: none;
-}
-
-#score, #highscore {
-  margin: 5px;
-  font-size: 18px;
+  margin-top: 6px;
 }
 
 #clear {
-  font-size: 32px;
+  font-size: 2em;
   color: gold;
-  margin-top: 20px;
   animation: pop 1s infinite alternate;
+  margin-top: 10px;
 }
 
 @keyframes pop {
   from { transform: scale(1); }
   to { transform: scale(1.2); }
 }
+
+@media (min-width: 700px) {
+  :root {
+    --card-w: 80px;
+  }
+}
 </style>
 </head>
+
 <body>
 
-<h2>ピラミッドソリティア</h2>
-<div id="score">スコア: 0</div>
-<div id="highscore">ハイスコア: 0</div>
+<h2>🃏 ピラミッドソリティア</h2>
 
 <div id="game">
+  <div id="info">
+    <div id="score">スコア: 0</div>
+    <div id="highscore">ハイスコア: 0</div>
+  </div>
+
   <div id="pyramid"></div>
 
   <div>
@@ -95,14 +116,13 @@ button {
     <div id="waste" class="card"></div>
   </div>
 
-  <br>
   <button onclick="restart()">リスタート</button>
 </div>
 
 <div id="clear"></div>
 
 <script>
-const suits = ["S", "H", "D", "C"];
+const suits = ["S","H","D","C"];
 const values = [
   {v:1,n:"A"}, {v:2,n:"2"}, {v:3,n:"3"}, {v:4,n:"4"},
   {v:5,n:"5"}, {v:6,n:"6"}, {v:7,n:"7"},
@@ -114,17 +134,15 @@ let deck=[], pyramid=[], selected=null, waste=null;
 let score=0, combo=0;
 let highScore = Number(localStorage.getItem("pyramidHighScore")) || 0;
 
-document.getElementById("highscore").textContent = "ハイスコア: " + highScore;
-
-function cardImage(card){
-  return `https://deckofcardsapi.com/static/img/${card.n}${card.s}.png`;
+function cardImg(c){
+  return `https://deckofcardsapi.com/static/img/${c.n}${c.s}.png`;
 }
 
 function createDeck(){
   deck=[];
   for(let s of suits){
     for(let v of values){
-      deck.push({...v, s});
+      deck.push({...v,s});
     }
   }
   deck.sort(()=>Math.random()-0.5);
@@ -136,7 +154,7 @@ function buildPyramid(){
   for(let r=0;r<7;r++){
     let row=[];
     for(let c=0;c<=r;c++){
-      row.push({ ...deck[i++], removed:false });
+      row.push({...deck[i++], removed:false});
     }
     pyramid.push(row);
   }
@@ -152,8 +170,8 @@ function render(){
   const p=document.getElementById("pyramid");
   p.innerHTML="";
   pyramid.forEach((row,r)=>{
-    const div=document.createElement("div");
-    div.className="row";
+    const rowDiv=document.createElement("div");
+    rowDiv.className="row";
     row.forEach((card,c)=>{
       const d=document.createElement("div");
       d.className="card";
@@ -162,59 +180,54 @@ function render(){
       } else if(!canSelect(r,c)){
         d.classList.add("hidden");
       } else {
-        d.style.backgroundImage=`url(${cardImage(card)})`;
+        d.style.backgroundImage=`url(${cardImg(card)})`;
         d.onclick=()=>selectCard(card,d);
       }
-      div.appendChild(d);
+      rowDiv.appendChild(d);
     });
-    p.appendChild(div);
+    p.appendChild(rowDiv);
   });
 
   const w=document.getElementById("waste");
-  if(waste){
-    w.style.backgroundImage=`url(${cardImage(waste)})`;
-  } else {
-    w.style.backgroundImage="";
-  }
+  w.style.backgroundImage = waste ? `url(${cardImg(waste)})` : "";
 
-  document.getElementById("score").textContent="スコア: "+score;
-  document.getElementById("highscore").textContent="ハイスコア: "+highScore;
+  document.getElementById("score").textContent = "スコア: " + score;
+  document.getElementById("highscore").textContent = "ハイスコア: " + highScore;
 }
 
 function addScore(p){
-  score+=p;
-  if(score>highScore){
-    highScore=score;
-    localStorage.setItem("pyramidHighScore",highScore);
+  score += p;
+  if(score > highScore){
+    highScore = score;
+    localStorage.setItem("pyramidHighScore", highScore);
   }
 }
 
-function selectCard(card,el){
-  if(card.v===13){
+function selectCard(card, el){
+  if(card.v === 13){
     addScore(100);
-    card.removed=true;
+    card.removed = true;
     render();
     return;
   }
-
   if(!selected){
-    selected={card,el};
+    selected = {card, el};
     el.classList.add("selected");
-  }else{
+  } else {
     if(selected.card.v + card.v === 13){
-      addScore(100 + combo*20);
-      selected.card.removed=true;
-      card.removed=true;
+      addScore(100 + combo * 20);
+      selected.card.removed = true;
+      card.removed = true;
     }
-    selected=null;
+    selected = null;
     render();
   }
 }
 
-document.getElementById("deck").onclick=()=>{
+document.getElementById("deck").onclick = ()=>{
   if(deck.length){
-    waste=deck.pop();
-    combo=0;
+    waste = deck.pop();
+    combo = 0;
     render();
   }
 };
