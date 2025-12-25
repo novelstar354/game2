@@ -17,16 +17,17 @@ body {
   font-family: sans-serif;
   text-align: center;
   color: white;
-  touch-action: manipulation;
 }
 
 #game {
   max-width: 520px;
   margin: auto;
-  padding: 8px;
+  padding: 10px;
 }
 
-h2 { margin: 8px 0; }
+h2 {
+  margin: 8px 0;
+}
 
 #info {
   display: flex;
@@ -47,10 +48,12 @@ h2 { margin: 8px 0; }
   background-position: center;
   border: 2px solid #222;
   margin: 3px;
-  transition: transform .15s, opacity .2s;
+  transition: transform .15s;
 }
 
-.card:active { transform: scale(0.95); }
+.card:active {
+  transform: scale(0.95);
+}
 
 .hidden {
   background-image: url("https://upload.wikimedia.org/wikipedia/commons/5/54/Card_back_01.svg");
@@ -63,6 +66,7 @@ h2 { margin: 8px 0; }
 #deck, #waste {
   display: inline-block;
   margin: 6px;
+  cursor: pointer;
 }
 
 button {
@@ -76,8 +80,8 @@ button {
 #clear {
   font-size: 2em;
   color: gold;
-  animation: pop 1s infinite alternate;
   margin-top: 10px;
+  animation: pop 1s infinite alternate;
 }
 
 @keyframes pop {
@@ -164,6 +168,7 @@ function render(){
     row.forEach((card,c)=>{
       const d=document.createElement("div");
       d.className="card";
+
       if(card.removed){
         d.style.visibility="hidden";
       } else if(!canSelect(r,c)){
@@ -178,8 +183,11 @@ function render(){
   });
 
   const w=document.getElementById("waste");
-  w.style.backgroundImage = waste ? `url(${cardImg(waste)})` : "";
-  w.onclick = ()=> waste && selectCard(waste);
+  if(waste){
+    w.style.backgroundImage = `url(${cardImg(waste)})`;
+  } else {
+    w.style.backgroundImage = "";
+  }
 
   document.getElementById("score").textContent = "スコア: " + score;
   document.getElementById("highscore").textContent = "ハイスコア: " + highScore;
@@ -220,11 +228,11 @@ function selectCard(card){
 }
 
 document.getElementById("deck").onclick = ()=>{
-  if(deck.length){
-    waste = deck.pop();
-    combo = 0;
-    render();
-  }
+  if(deck.length === 0) return;
+  waste = deck.pop();
+  combo = 0;
+  selected = null;
+  render();
 };
 
 function checkClear(){
@@ -235,11 +243,11 @@ function checkClear(){
 }
 
 function restart(){
-  score=0;
-  combo=0;
-  waste=null;
-  selected=null;
-  document.getElementById("clear").textContent="";
+  score = 0;
+  combo = 0;
+  waste = null;
+  selected = null;
+  document.getElementById("clear").textContent = "";
   createDeck();
   buildPyramid();
   render();
