@@ -1,260 +1,205 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>ピラミッドソリティア</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<link rel="icon" href="https://pbs.twimg.com/profile_images/1907236416603697152/k8t63nwa.jpg" sizes="16×16" type="image/png" />   
 <style>
-:root {
-  --card-w: min(12vw, 70px);
-  --card-h: calc(var(--card-w) * 1.4);
-}
+body{margin:0;font-family:system-ui,sans-serif;background:radial-gradient(circle at 50% 30%,#0f513a,#07281e);color:#fff;display:flex;justify-content:center}
+#game{max-width:900px;padding:12px}
+h1{text-align:center;margin:8px 0 12px;letter-spacing:2px}
+.topbar{display:flex;justify-content:space-between;margin-bottom:8px;font-weight:700}
+.board{display:flex;flex-direction:column;align-items:center}
+.row{display:flex;justify-content:center}
 
-body {
-  margin: 0;
-  background: linear-gradient(#0a5, #063);
-  font-family: sans-serif;
-  text-align: center;
-  color: white;
-}
+.card{position:relative;width:70px;height:98px;margin:4px;perspective:800px;cursor:pointer}
+.cardInner{position:relative;width:100%;height:100%;transition:transform .5s;transform-style:preserve-3d}
+.card.flip .cardInner{transform:rotateY(180deg)}
 
-#game {
-  max-width: 520px;
-  margin: auto;
-  padding: 10px;
-}
+.face{position:absolute;inset:0;border-radius:12px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;overflow:hidden;box-shadow:0 10px 18px rgba(0,0,0,.45),inset 0 0 0 2px #ddd,inset 0 0 24px rgba(0,0,0,.08)}
+.front{background:linear-gradient(145deg,#fff,#f1f1f1);color:#111}
+.back{background:radial-gradient(circle at center,#1b4d3c 20%,#13382b 100%),repeating-linear-gradient(45deg,#1e5f4a,#1e5f4a 6px,#174c3a 6px,#174c3a 12px);transform:rotateY(180deg)}
 
-h2 {
-  margin: 8px 0;
-}
+.card.red .front{color:#c40000}
+.card.selected .front{outline:4px solid gold}
+.card.removing{animation:vanish .45s forwards}
+@keyframes vanish{to{transform:scale(.1) rotate(720deg);opacity:0}}
 
-#info {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
+.corner{position:absolute;top:6px;left:6px;font-size:14px;line-height:1.1;font-weight:bold}
+.corner.bottom{top:auto;bottom:6px;left:auto;right:6px;transform:rotate(180deg)}
+.center{font-size:30px;opacity:.95}
 
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-.card {
-  width: var(--card-w);
-  height: var(--card-h);
-  border-radius: 6px;
-  background-size: cover;
-  background-position: center;
-  border: 2px solid #222;
-  margin: 3px;
-  transition: transform .15s;
-}
-
-.card:active {
-  transform: scale(0.95);
-}
-
-.hidden {
-  background-image: url("https://upload.wikimedia.org/wikipedia/commons/5/54/Card_back_01.svg");
-}
-
-.selected {
-  outline: 3px solid red;
-}
-
-#deck, #waste {
-  display: inline-block;
-  margin: 6px;
-  cursor: pointer;
-}
-
-button {
-  padding: 10px 18px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: none;
-  margin-top: 8px;
-}
-
-#clear {
-  font-size: 2em;
-  color: gold;
-  margin-top: 10px;
-  animation: pop 1s infinite alternate;
-}
-
-@keyframes pop {
-  from { transform: scale(1); }
-  to { transform: scale(1.2); }
-}
+.bottom{margin-top:12px;display:flex;justify-content:space-between;align-items:center}
+.stack{display:flex}
+button{padding:8px 14px;border:none;border-radius:6px;background:#ffd54f;font-weight:700;cursor:pointer}
+.info{text-align:center;margin-top:8px;min-height:24px}
+.gap{width:70px;height:98px;margin:4px}
 </style>
 </head>
-
 <body>
-
-<h2>🃏 ピラミッドソリティア</h2>
-
 <div id="game">
-  <div id="info">
-    <div id="score">スコア: 0</div>
-    <div id="highscore">ハイスコア: 0</div>
-  </div>
-
-  <div id="pyramid"></div>
-
-  <div>
-    <div id="deck" class="card hidden"></div>
-    <div id="waste" class="card"></div>
-  </div>
-
-  <button onclick="restart()">リスタート</button>
+<h1>ピラミッドソリティア</h1>
+<div class="topbar">
+<div>⏱ タイム: <span id="time">0</span>s</div>
+<div>⭐ スコア: <span id="score">0</span></div>
+</div>
+<div class="board" id="pyramid"></div>
+<div class="bottom">
+<div><div>山札</div><div class="stack" id="stock"></div></div>
+<div><div>捨て札</div><div class="stack" id="waste"></div></div>
+<button onclick="restart()">リスタート</button>
+</div>
+<div class="info" id="info"></div>
 </div>
 
-<div id="clear"></div>
-
 <script>
-const suits = ["S","H","D","C"];
-const values = [
-  {v:1,n:"A"},{v:2,n:"2"},{v:3,n:"3"},{v:4,n:"4"},
-  {v:5,n:"5"},{v:6,n:"6"},{v:7,n:"7"},
-  {v:8,n:"8"},{v:9,n:"9"},{v:10,n:"10"},
-  {v:10,n:"J"},{v:10,n:"Q"},{v:10,n:"K"}
-];
+const suits=['♠','♥','♦','♣'];
+const values=[1,2,3,4,5,6,7,8,9,10,11,12,13];
+let deck=[],pyramid=[],stock=[],waste=[];
+let selected=null,score=0,startTime=0,timerInterval;
 
-let deck=[], pyramid=[], waste=null, selected=null;
-let score=0, combo=0;
-let highScore = Number(localStorage.getItem("pyramidHighScore")) || 0;
+const timeEl=document.getElementById('time');
+const scoreEl=document.getElementById('score');
+const infoEl=document.getElementById('info');
 
-function cardImg(c){
-  return `https://deckofcardsapi.com/static/img/${c.n}${c.s}.png`;
-}
+function rankLabel(v){return{1:'A',11:'J',12:'Q',13:'K'}[v]||v}
+function isRed(s){return s==='♥'||s==='♦'}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}
 
-function createDeck(){
-  deck=[];
-  for(let s of suits){
-    for(let v of values){
-      deck.push({...v,s});
+// ★ 絵札画像を1枚ずつ個別指定できるマップ
+function getFaceImage(card){
+  const IMG = {
+    '♠': {
+      'J': 'https://illust8.com/wp-content/uploads/2018/09/mark_spade_illust_1307.png',
+      'Q': 'https://illust8.com/wp-content/uploads/2018/09/mark_spade_illust_1307.png',
+      'K': 'https://illust8.com/wp-content/uploads/2018/09/mark_spade_illust_1307.png'
+    },
+    '♥': {
+      'J': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8UI8kvvNR_LsPWwP6QmJMqZDU43vFz8CKwA&s',
+      'Q': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8UI8kvvNR_LsPWwP6QmJMqZDU43vFz8CKwA&s',
+      'K': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8UI8kvvNR_LsPWwP6QmJMqZDU43vFz8CKwA&s'
+    },
+    '♦': {
+      'J': 'https://livedoor.blogimg.jp/illustrationm/imgs/6/3/634e23ae.gif',
+      'Q': 'https://livedoor.blogimg.jp/illustrationm/imgs/6/3/634e23ae.gif',
+      'K': 'https://livedoor.blogimg.jp/illustrationm/imgs/6/3/634e23ae.gif'
+    },
+    '♣': {
+      'J': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUmUPllwfMBe98CLxpejc1TTQI9zsaD1bMag&s',
+      'Q': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUmUPllwfMBe98CLxpejc1TTQI9zsaD1bMag&s',
+      'K': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUmUPllwfMBe98CLxpejc1TTQI9zsaD1bMag&s'
     }
-  }
-  deck.sort(()=>Math.random()-0.5);
+  };
+
+  return IMG[card.s][rankLabel(card.v)];
 }
 
-function buildPyramid(){
-  pyramid=[];
-  let i=0;
-  for(let r=0;r<7;r++){
-    let row=[];
-    for(let c=0;c<=r;c++){
-      row.push({...deck[i++], removed:false});
+function render(){renderPyramid();renderStock();renderWaste();checkClear()}
+
+function makeCardEl(card,onclick,covered=false){
+  const el=document.createElement('div');
+  el.className='card'+(isRed(card.s)?' red':'');
+  el.onclick=onclick;
+
+  const inner=document.createElement('div');inner.className='cardInner';
+  const front=document.createElement('div');front.className='face front';
+  const back=document.createElement('div');back.className='face back';
+
+  if(card.s){
+    const c1=document.createElement('div');c1.className='corner';
+    c1.innerHTML=`${rankLabel(card.v)}<br>${card.s}`;
+    const c2=document.createElement('div');c2.className='corner bottom';
+    c2.innerHTML=`${rankLabel(card.v)}<br>${card.s}`;
+    const center=document.createElement('div');center.className='center';
+
+    if(['J','Q','K'].includes(rankLabel(card.v))){
+      const img=document.createElement('img');
+      img.src=getFaceImage(card);
+      img.style.width='70%';
+      img.style.objectFit='contain';
+      center.appendChild(img);
+    }else{
+      center.textContent=card.s;
     }
-    pyramid.push(row);
+    front.append(c1,c2,center);
   }
+
+  inner.append(front,back);
+  el.appendChild(inner);
+  if(covered) el.classList.add('flip');
+  return el;
 }
 
-function canSelect(r,c){
-  if(pyramid[r][c].removed) return false;
-  if(r===6) return true;
-  return pyramid[r+1][c].removed && pyramid[r+1][c+1].removed;
-}
-
-function render(){
-  const p=document.getElementById("pyramid");
-  p.innerHTML="";
-
+function renderPyramid(){
+  const root=document.getElementById('pyramid');root.innerHTML='';
   pyramid.forEach((row,r)=>{
-    const rowDiv=document.createElement("div");
-    rowDiv.className="row";
+    const rowEl=document.createElement('div');rowEl.className='row';
     row.forEach((card,c)=>{
-      const d=document.createElement("div");
-      d.className="card";
-
-      if(card.removed){
-        d.style.visibility="hidden";
-      } else if(!canSelect(r,c)){
-        d.classList.add("hidden");
-      } else {
-        d.style.backgroundImage=`url(${cardImg(card)})`;
-        d.onclick=()=>selectCard(card);
-      }
-      rowDiv.appendChild(d);
+      if(card.removed){rowEl.appendChild(Object.assign(document.createElement('div'),{className:'gap'}));return}
+      const free=isFree(r,c);
+      const el=makeCardEl(card,()=>onCard(card,r,c,free),!free);
+      if(selected===card)el.classList.add('selected');
+      rowEl.appendChild(el);
     });
-    p.appendChild(rowDiv);
+    root.appendChild(rowEl);
   });
-
-  const w=document.getElementById("waste");
-  if(waste){
-    w.style.backgroundImage = `url(${cardImg(waste)})`;
-  } else {
-    w.style.backgroundImage = "";
-  }
-
-  document.getElementById("score").textContent = "スコア: " + score;
-  document.getElementById("highscore").textContent = "ハイスコア: " + highScore;
-
-  checkClear();
 }
 
-function addScore(p){
-  score += p;
-  if(score > highScore){
-    highScore = score;
-    localStorage.setItem("pyramidHighScore", highScore);
-  }
+function renderStock(){
+  const s=document.getElementById('stock');s.innerHTML='';
+  if(!stock.length && waste.length){stock=waste.reverse();waste=[]}
+  if(stock.length){s.appendChild(makeCardEl({s:'',v:0},draw,true))}
 }
 
-function selectCard(card){
-  if(card.v === 13){
-    card.removed = true;
-    addScore(100);
-    render();
-    return;
-  }
-
-  if(!selected){
-    selected = card;
-  } else {
-    if(selected !== card && selected.v + card.v === 13){
-      selected.removed = true;
-      card.removed = true;
-      addScore(100 + combo * 20);
-      combo++;
-    } else {
-      combo = 0;
-    }
-    selected = null;
-    render();
-  }
+function renderWaste(){
+  const w=document.getElementById('waste');w.innerHTML='';
+  if(!waste.length)return;
+  const card=waste[waste.length-1];
+  const el=makeCardEl(card,()=>onCard(card),false);
+  if(selected===card)el.classList.add('selected');
+  w.appendChild(el);
 }
 
-document.getElementById("deck").onclick = ()=>{
-  if(deck.length === 0) return;
-  waste = deck.pop();
-  combo = 0;
-  selected = null;
-  render();
-};
+function createDeck(){deck=[];for(const s of suits){for(const v of values){deck.push({s,v})}}shuffle(deck)}
 
-function checkClear(){
-  const left = pyramid.flat().some(c=>!c.removed);
-  if(!left){
-    document.getElementById("clear").textContent = "🎉 CLEAR!! 🎉";
-  }
+function setup(){
+  createDeck();pyramid=[];let idx=0;
+  for(let r=0;r<7;r++){const row=[];for(let c=0;c<=r;c++){row.push({...deck[idx++],removed:false})}pyramid.push(row)}
+  stock=deck.slice(idx);waste=[];selected=null;score=0;updateScore(0);startTimer();render();
 }
 
-function restart(){
-  score = 0;
-  combo = 0;
-  waste = null;
-  selected = null;
-  document.getElementById("clear").textContent = "";
-  createDeck();
-  buildPyramid();
+function startTimer(){startTime=Date.now();clearInterval(timerInterval);timerInterval=setInterval(()=>{timeEl.textContent=Math.floor((Date.now()-startTime)/1000)},1000)}
+function updateScore(v){score+=v;scoreEl.textContent=score}
+
+function isFree(r,c){if(pyramid[r][c].removed)return false;if(r===6)return true;return pyramid[r+1][c].removed&&pyramid[r+1][c+1].removed}
+
+function onCard(card,r,c,free=true){
+  if(r!==undefined&&!free)return;
+  if(selected===card){selected=null;render();return}
+  if(card.v===13){animateRemove(card);updateScore(100);selected=null;return}
+  if(!selected){selected=card;render();return}
+  if(selected.v+card.v===13){animateRemove(selected);animateRemove(card);updateScore(200);selected=null;return}
+  selected=card;render();
+}
+
+function animateRemove(card){
+  card.removed=true;
+  setTimeout(()=>render(),260);
+}
+
+function draw(){
+  if(!stock.length)return;
+  waste.push(stock.pop());
+  updateScore(-5);
+  selected=null;
   render();
 }
 
-restart();
+function checkClear(){if(pyramid.flat().every(c=>c.removed)){infoEl.textContent='クリア！'}}
+function restart(){setup()}
+
+setup();
 </script>
-
 </body>
 </html>
